@@ -1,0 +1,6 @@
+dealii official site
+https://dealii.org/9.5.0/doxygen/deal.II/index.html
+officials tutorials
+https://dealii.org/9.5.0/doxygen/deal.II/Tutorial.html
+lectures Texas A&M
+https://www.math.colostate.edu/~bangerth/videos.html
