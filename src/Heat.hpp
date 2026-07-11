@@ -36,6 +36,9 @@ using namespace dealii;
 
 /**
  * Class managing the differential problem.
+
+ * At this stage the mesh and time step are fixed. Later adaptivity can reuse
+ * the same separation.
  */
 class Heat
 {
@@ -64,7 +67,9 @@ public:
        const double                                    &theta_,
        const double                                    &delta_t_,
        const std::function<double(const Point<dim> &)> &mu_,
-       const std::function<double(const Point<dim> &, const double &)> &f_)
+       const std::function<double(const Point<dim> &, const double &)> &f_,
+       const std::string                               &output_directory_,
+       const std::string                               &output_basename_)
     : mesh_file_name(mesh_file_name_)
     , r(r_)
     , T(T_)
@@ -72,6 +77,8 @@ public:
     , delta_t(delta_t_)
     , mu(mu_)
     , f(f_)
+    , output_directory(output_directory_)
+    , output_basename(output_basename_)
     , mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , mesh(MPI_COMM_WORLD)
@@ -111,8 +118,9 @@ protected:
   // Theta parameter for the theta method.
   const double theta;
 
-  // Time step.
-  const double delta_t;
+  // Time step. It is mutable so the last step can be clamped to T - time, and
+  // later adaptivity can update it.
+  double delta_t;
 
   // Current time.
   double time = 0.0;
@@ -125,6 +133,12 @@ protected:
 
   // Forcing term.
   std::function<double(const Point<dim> &p, const double &t)> f;
+
+  // Output directory.
+  const std::string output_directory;
+
+  // Output file basename.
+  const std::string output_basename;
 
   // Number of MPI processes.
   const unsigned int mpi_size;
@@ -155,6 +169,12 @@ protected:
 
   // System solution, with ghost elements.
   TrilinosWrappers::MPI::Vector solution;
+
+  // Previous time layer, without ghost elements.
+  TrilinosWrappers::MPI::Vector old_solution_owned;
+
+  // Previous time layer, with ghost elements.
+  TrilinosWrappers::MPI::Vector old_solution;
 
   // Output stream for process 0.
   ConditionalOStream pcout;

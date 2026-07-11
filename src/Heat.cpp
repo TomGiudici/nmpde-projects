@@ -86,7 +86,15 @@ Heat::setup()
     system_rhs.reinit(locally_owned_dofs, MPI_COMM_WORLD);
     solution_owned.reinit(locally_owned_dofs, MPI_COMM_WORLD);
     solution.reinit(locally_owned_dofs, locally_relevant_dofs, MPI_COMM_WORLD);
+    old_solution_owned.reinit(locally_owned_dofs, MPI_COMM_WORLD);
+    old_solution.reinit(locally_owned_dofs, locally_relevant_dofs, MPI_COMM_WORLD);
   }
+
+  // Only rank 0 creates the folder; the barrier avoids other ranks writing
+  // output before the directory exists.
+  if (mpi_rank == 0)
+    std::filesystem::create_directories(output_directory);
+  MPI_Barrier(MPI_COMM_WORLD);
 }
 
 void
@@ -224,11 +232,10 @@ Heat::output() const
 
   data_out.build_patches();
 
-  const std::filesystem::path mesh_path(mesh_file_name);
-  const std::string output_file_name = "output-" + mesh_path.stem().string();
+  const std::string output_folder = output_directory + "/";
 
-  data_out.write_vtu_with_pvtu_record(/* folder = */ "./",
-                                      /* basename = */ output_file_name,
+  data_out.write_vtu_with_pvtu_record(/* folder = */ output_folder,
+                                      /* basename = */ output_basename,
                                       /* index = */ timestep_number,
                                       MPI_COMM_WORLD);
 }
@@ -241,7 +248,9 @@ Heat::run()
     setup();
 
     VectorTools::interpolate(dof_handler, FunctionU0(), solution_owned);
-    solution = solution_owned;
+    solution           = solution_owned;
+    old_solution_owned = solution_owned;
+    old_solution       = solution;
 
     time            = 0.0;
     timestep_number = 0;
@@ -253,8 +262,10 @@ Heat::run()
   pcout << "===============================================" << std::endl;
 
   // Time-stepping loop.
-  while (time < T - 0.5 * delta_t)
+  while (time < T - 1e-12)
     {
+      // Shorten only the last step so the final output is exactly at T.
+      delta_t = std::min(delta_t, T - time);
       time += delta_t;
       ++timestep_number;
 
@@ -270,5 +281,9 @@ Heat::run()
       solution = solution_owned;
 
       output();
+
+      // Accept the step and make the current solution the old time layer.
+      old_solution_owned = solution_owned;
+      old_solution       = solution;
     }
 }

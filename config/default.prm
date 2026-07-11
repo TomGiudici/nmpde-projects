@@ -1,0 +1,52 @@
+# Default parameters for Project 5: Space and time adaptivity.
+
+subsection Mesh
+    # mesh and polynomial degree of FE_SimplexP.
+    set file_name = ../mesh/mesh-cube-10.msh
+    set degree    = 1
+end
+
+subsection Time
+    # theta = 1.0 gives Backward Euler; theta = 0.5 gives Crank-Nicolson.
+    # min/max_delta_t will be used by adaptive time stepping.
+    set final_time      = 1.0
+    set theta           = 1.0
+    set initial_delta_t = 0.0025
+    set min_delta_t     = 1e-6
+    set max_delta_t     = 1e-2
+end
+
+subsection Diffusion
+    # Constant diffusion coefficient mu.
+    set mu = 1.0
+end
+
+subsection Source
+    # Source term f(x,t) = g(t)*h(x).
+    # a and N control the temporal pulses
+    # sigma and center_* control the Gaussian.
+    set a        = 5.0
+    set N        = 5
+    set sigma    = 0.1
+    set center_x = 0.5
+    set center_y = 0.5
+    set center_z = 0.5
+end
+
+subsection Adaptivity
+    # Current implemented mode is none. 
+    # The remaining parameters are already centralized
+    set mode                   = none
+    set time_tolerance_high    = 1e-4
+    set time_tolerance_low     = 2e-6
+    set refine_every_n_steps   = 5
+    set max_refinement_level   = 8
+    set space_refine_fraction  = 0.3
+    set space_coarsen_fraction = 0.1
+end
+
+subsection Output
+    # DataOut writes output/<basename>_*.vtu and .pvtu files for ParaView.
+    set directory = output
+    set basename  = heat
+end
